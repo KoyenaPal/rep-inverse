@@ -1,7 +1,3 @@
-# rome-detector
-For ROME-Detector Project with Bau Lab
-
-
 ## Execution notes
 ### 1
 To test things out: `python run.py --model t5-small --embedder EleutherAI/pythia-14m --from_gradients --tinydata`. Once you're ready to run the full thing, remove `--tinydata` and add `--wandb`.
