@@ -66,13 +66,17 @@ def load_one_million_instructions() -> datasets.Dataset:
     # and "user" (user input) columns
     dataset_dict = datasets.load_dataset("wentingzhao/one-million-instructions")
     dataset_dict = dataset_map_multi_worker(dataset_dict, create_ompi_ex)
-
     return dataset_dict["train"]
 
 
 def load_anthropic_toxic_prompts() -> datasets.Dataset:
     d = datasets.load_dataset("wentingzhao/anthropic-hh-first-prompt")["train"]
     d = d.rename_column("user", "text")
+    return d
+
+def load_person_finder() -> datasets.Dataset:
+    d = datasets.load_from_disk("/share/u/koyena/datasets/small_filtered_person_finder_pile_ner_dataset")["train"]
+    d = d.rename_column("sentence", "text")
     return d
 
 
@@ -104,6 +108,10 @@ def dataset_from_args(data_args: DataArguments) -> datasets.DatasetDict:
         raw_datasets = load_one_million_instructions()
         raw_datasets = raw_datasets.train_test_split(test_size=0.01)
         raw_datasets["validation"] = raw_datasets["test"]
+    elif data_args.dataset_name == "person_finder":
+        raw_datasets = load_person_finder()
+        raw_datasets = raw_datasets.train_test_split(test_size=0.01)
+        raw_datasets["validation"] = raw_datasets["test"]
     elif data_args.dataset_name == "luar_reddit":
         all_luar_datasets = load_luar_reddit()
         raw_datasets = datasets.DatasetDict(
@@ -122,7 +130,7 @@ def load_ag_news_test() -> datasets.Dataset:
 
 
 def load_xsum_val(col: str) -> datasets.Dataset:
-    d = datasets.load_dataset("xsum")["validation"]
+    d = datasets.load_dataset("EdinburghNLP/xsum")["validation"]
     d = d.rename_column(col, "text")
     return d
 
@@ -246,10 +254,10 @@ def load_standard_val_datasets() -> datasets.DatasetDict:
         "anthropic_toxic_prompts": load_anthropic_toxic_prompts(),
         "arxiv": load_arxiv_val(),
         "python_code_alpaca": load_python_code_instructions_18k_alpaca(),
-        # "xsum_doc": load_xsum_val("document"),
-        # "xsum_summ": load_xsum_val("summary"),
+        "xsum_doc": load_xsum_val("document"),
+        "xsum_summ": load_xsum_val("summary"),
         "wikibio": load_wikibio_val(),
+        "person_finder": load_person_finder()
     }
     d = {k: retain_dataset_columns(v, ["text"]) for k, v in d.items()}
-
     return datasets.DatasetDict(d)

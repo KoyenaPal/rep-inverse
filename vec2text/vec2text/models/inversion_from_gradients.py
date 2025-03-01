@@ -40,7 +40,7 @@ def compute_loss(model):
     return compute_loss_
 
 
-class InversionFromFullGradientsModel(InversionModel):
+class InversionFromGradientsModel(InversionModel):
     def __init__(self, config: InversionConfig):
         super().__init__(config=config)
         self.encoder_hidden_dim = self.encoder_decoder.config.hidden_size
@@ -65,7 +65,7 @@ class InversionFromFullGradientsModel(InversionModel):
 
         # pad input_ids to match the shape of emb_input_ids
         input_ids = nn.functional.pad(input_ids, (0, emb_input_ids.input_ids.shape[1] - input_ids.shape[1]))
-
+        
         ft_compute_grad = grad(compute_loss(self.embedder))
         ft_compute_sample_grad = vmap(ft_compute_grad, in_dims=(None, None, 0, 0))
         ft_per_sample_grads = ft_compute_sample_grad(
@@ -95,8 +95,9 @@ class InversionFromFullGradientsModel(InversionModel):
                 g = g.unsqueeze(-1)
             elif g.shape[1] < g.shape[2]:
                 g = g.transpose(1, 2)
-
+            #g = g[0,:,:]
             U, _, _ = torch.svd_lowrank(g, q=1)
+            #U, _, _ = torch.svd_lowrank(g, q=5)
 
             if len(U.shape) == 3:
                 Us.append(U.squeeze(-1))

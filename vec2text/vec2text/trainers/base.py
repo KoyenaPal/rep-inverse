@@ -3,6 +3,7 @@ import copy
 import logging
 import os
 import random
+import csv
 
 # import statistics
 from typing import Callable, Dict, List, Tuple, Union
@@ -132,24 +133,42 @@ class BaseTrainer(transformers.Trainer):
     def _log_preds_table(
         self, table_key: str, decoded_preds: List[str], decoded_labels: List[str]
     ):
-        if not self.args.use_wandb:
+        if not (self.args.local_rank <= 0):
             return
-        elif not (self.args.local_rank <= 0):
-            return
-
-        num_rows = 50
-        idxs = random.choices(
-            range(len(decoded_preds)), k=min(len(decoded_preds), num_rows)
-        )
+        #Orginally the following
+#         if not self.args.use_wandb:
+#             return
+#         elif not (self.args.local_rank <= 0):
+#             return
+        #Originally 50
+        #num_rows = 50 
+        #idxs = random.choices(
+        #    range(len(decoded_preds)), k=min(len(decoded_preds), num_rows)
+        #)
 
         data = []
-        for idx in idxs:
+        #for idx in idxs:
+        print("TOTAL NUM", len(decoded_preds), flush=True) 
+        for idx in range(len(decoded_preds)):
             data.append([decoded_labels[idx], decoded_preds[idx]])
+        if self.args.use_wandb:
+            import wandb
 
-        import wandb
+            table = wandb.Table(columns=["Original", "Decoded"], data=data)
+            wandb.log({table_key: table})
+        else:
+            # Specify the CSV file name
+            filename = "eval_output.csv"
 
-        table = wandb.Table(columns=["Original", "Decoded"], data=data)
-        wandb.log({table_key: table})
+            # Write data to the CSV file
+            with open(filename, mode='w', newline='', encoding='utf-8') as file:
+                writer = csv.writer(file)
+                # Write the header
+                writer.writerow(["Original", "Decoded"])
+                # Write the rows
+                writer.writerows(data)
+
+            print(f"Data successfully written to {filename}")
 
     def _get_decoded_sequences(
         self, dataloader: torch.utils.data.DataLoader, n: int
@@ -387,6 +406,8 @@ class BaseTrainer(transformers.Trainer):
             references_ids=preds_sample_labels_list,
             references_str=decoded_labels,
         )
+        print("function right before log pred table")
+        print("length of decoded_preds", len(decoded_preds), flush=True)
         self._log_preds_table(
             table_key="val_text_preds",
             decoded_preds=decoded_preds,

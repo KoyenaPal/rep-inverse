@@ -143,6 +143,7 @@ class Experiment(abc.ABC):
 
     def train(self) -> Dict:
         # *** Training ***
+        print("Came to train method", flush=True)
         training_args = self.training_args
         logger.info("*** Training ***")
 
@@ -181,6 +182,7 @@ class Experiment(abc.ABC):
 
     def evaluate(self) -> Dict:
         # *** Evaluation ***
+        print("Came to evaluate method", flush=True)
         logger.info("*** Evaluate ***")
         trainer = self.load_trainer()
         num_eval_samples = len(trainer.eval_dataset)
@@ -191,6 +193,7 @@ class Experiment(abc.ABC):
         metrics["eval_samples"] = min(max_eval_samples, num_eval_samples)
         trainer.log_metrics("eval", metrics)
         trainer.save_metrics("eval", metrics)
+        print(metrics, flush=True)
         return metrics
 
     def _get_checkpoint(self) -> Optional[str]:
@@ -415,6 +418,7 @@ class Experiment(abc.ABC):
         val_datasets_dict: datasets.DatasetDict,
     ) -> datasets.DatasetDict:
         for name, dataset in val_datasets_dict.items():
+            print("Came to prepare val datasets dict", name, flush=True)
             max_eval_samples = min(len(dataset), self.data_args.max_eval_samples)
             val_datasets_dict[name] = val_datasets_dict[name].select(range(max_eval_samples))
             val_datasets_dict[name] = val_datasets_dict[name].add_column("idx", range(len(val_datasets_dict[name])))
@@ -523,11 +527,17 @@ class Experiment(abc.ABC):
                 max_shard_size="2GB",
             )
         ######################################################################
+#         print("MAYBE IT IS THIS?", flush=True)
         val_dataset_kwargs = {
             "dataset_name": "__".join(["ag_news", "arxiv", "xsum_doc", "xsum_summ", "wikibio"]),
             **dataset_kwargs,
         }
+        # val_dataset_kwargs = {
+        #     "dataset_name": "__".join(["ag_news"]),
+        #     **dataset_kwargs,
+        # }
         val_dataset_path = os.path.join(DATASET_CACHE_PATH, (md5_hash_kwargs(**val_dataset_kwargs) + ".arrow"))
+        print("VAL_DATASET_PATH", val_dataset_path, flush=True)
         assert val_dataset_path != train_dataset_path
         if os.path.exists(val_dataset_path):
             val_datasets_dict = datasets.load_from_disk(val_dataset_path)
@@ -541,10 +551,12 @@ class Experiment(abc.ABC):
             print("saving val_dataset to path:", val_dataset_path)
             val_datasets_dict.save_to_disk(val_dataset_path)
         ######################################################################
+        # removing the training set validation
         val_datasets_dict[self.data_args.dataset_name] = train_datasets["validation"]
         train_dataset = train_datasets["train"]
 
         for key in val_datasets_dict:
+            print("HEREEEEEEE", key)
             new_length = min(len(val_datasets_dict[key]), self.data_args.max_eval_samples)
             val_datasets_dict[key] = val_datasets_dict[key].select(range(new_length))
 

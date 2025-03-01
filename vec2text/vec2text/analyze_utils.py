@@ -146,7 +146,7 @@ def args_from_config(args_cls, config):
     return args
 
 
-def load_experiment_and_trainer_from_pretrained(name: str, use_less_data: int = 1000):
+def load_experiment_and_trainer_from_pretrained(name: str, use_less_data: int = 1000, use_wandb=False):
     config = InversionConfig.from_pretrained(name)
     model_args = args_from_config(ModelArguments, config)
     data_args = args_from_config(DataArguments, config)
@@ -162,7 +162,7 @@ def load_experiment_and_trainer_from_pretrained(name: str, use_less_data: int = 
     training_args.distributed_state = PartialState()
     training_args.deepspeed_plugin = None  # For backwards compatibility
     # training_args.dataloader_num_workers = 0  # no multiprocessing :)
-    training_args.use_wandb = False
+    training_args.use_wandb = use_wandb
     training_args.report_to = []
     training_args.mock_embedder = False
     training_args.output_dir = "saves/" + name.replace("/", "__")
@@ -174,7 +174,7 @@ def load_experiment_and_trainer_from_pretrained(name: str, use_less_data: int = 
     trainer.model.to(training_args.device)
     return experiment, trainer
 
-
+# previously num_tokens_per_example was 50, max_seq_len 63
 def load_gpt_fewshot_baseline_trainer(
     dataset_name: str = "one_million_instructions",
     embedder_model_name: str = "meta-llama/Llama-2-7b-hf",
@@ -225,7 +225,7 @@ def load_gpt_fewshot_baseline_trainer(
 
     return trainer
 
-
+# previously num_tokens_per_example was 50, max_seq_len = 32
 def load_jailbreak_baseline_trainer(
     prompt: str,
     dataset_name: str = "one_million_instructions",
